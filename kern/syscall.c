@@ -224,31 +224,33 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	
-	struct Env *srce, *dste;
-	struct Page *p;
-	pte_t *pte;
 	int r;
-
-	if (((uint32_t)srcva) >= UTOP || ((uint32_t)srcva) % PGSIZE != 0)
+	pte_t* pte;
+	struct Env* s_env;
+	struct Env* d_env;
+	struct Page* p;
+	if (srcva >= (void*)UTOP || ROUNDUP(srcva,PGSIZE) != srcva ||
+		dstva >= (void*)UTOP || ROUNDUP(dstva,PGSIZE) != dstva )
 		return -E_INVAL;
-	if (((uint32_t)dstva) >= UTOP || ((uint32_t)dstva) % PGSIZE != 0)
+	if ((perm & 5) != 5)
 		return -E_INVAL;
-	if ((r = envid2env(srcenvid, &srce, 1)) < 0)
-		return r;
-	if ((r = envid2env(dstenvid, &dste, 1)) < 0)
-		return r;
-
-	if(!(p = page_lookup(srce->env_pgdir, srcva, &pte)))
+	if ((perm & (~PTE_SYSCALL)) != 0 )
 		return -E_INVAL;
-	if (!(perm & PTE_P) || !(perm & PTE_U))
+	r = envid2env(srcenvid, &s_env, 1);
+	if (r < 0)
+		return -E_BAD_ENV;
+	r = envid2env(dstenvid, &d_env, 1);
+	if (r < 0)
+		return -E_BAD_ENV;
+	p = page_lookup(s_env->env_pgdir, srcva, &pte);
+	if (p == NULL)
 		return -E_INVAL;
-	if (!(*pte & PTE_W) && (perm & PTE_W))
+	if ((perm & PTE_W) != 0 && ((*pte) & PTE_W) == 0 )
 		return -E_INVAL;
-
-	if ((r = page_insert(dste->env_pgdir, p, dstva, perm)) < 0)
-		return r;
-	return 0;
+	r = page_insert(d_env->env_pgdir, p, dstva, perm);
+	if (r < 0)
+		return -E_NO_MEM;
+	panic("sys_page_map not implemented");
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.

@@ -56,7 +56,8 @@ struct Env {
 
 
 	// LAB3: might need code here for implementation of sbrk
-	int32_t env_brk;
+	uint32_t env_brk;
+
 	// Address space
 	pde_t *env_pgdir;		// Kernel virtual address of page dir
 

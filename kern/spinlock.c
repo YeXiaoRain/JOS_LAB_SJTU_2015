@@ -97,11 +97,12 @@ spin_lock(struct spinlock *lk)
 		asm volatile ("pause");
 #else
 	//LAB 4: Your code here
-	int own = atomic_return_and_add(&lk->next, 1);
-	// Theorically we can use lk->own != own here because of cache coherence,
-	// but it seems doesn't work in QEMU
-	while (atomic_return_and_add(&lk->own, 0) != own);
-		asm volatile ("pause");
+	uint32_t get_ticket = atomic_return_and_add(&(lk->next), 1);	
+	while(1) {
+		if (get_ticket == lk->own) {
+			break;
+		}
+	}
 #endif
 
 	// Record info about lock acquisition for debugging.

@@ -558,14 +558,6 @@ env_run(struct Env *e)
 
 	//if (e == curenv)
 	//	panic("env_run: Run current environment Again!");
-	if (curenv && curenv->env_status == ENV_RUNNING)
-		curenv->env_status = ENV_RUNNABLE;
-	curenv = e;
-	curenv->env_status = ENV_RUNNING;
-	curenv->env_runs++;
-	lcr3(PADDR(curenv->env_pgdir));
-	/*
-	
 	if (curenv != e) {
 		if (curenv && curenv->env_status == ENV_RUNNING)
 			curenv->env_status = ENV_RUNNABLE;
@@ -574,7 +566,6 @@ env_run(struct Env *e)
 		curenv->env_runs++;
 		lcr3(PADDR(curenv->env_pgdir));
 	}
-	*/
 	unlock_kernel();
 	env_pop_tf(&curenv->env_tf);
 }
