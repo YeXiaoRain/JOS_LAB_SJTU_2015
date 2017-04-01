@@ -94,6 +94,8 @@ sysenter_handler:
 
 	movl %ebp, %ecx
 	movl %esi, %edx
+
+	sti
 	sysexit
 /*
  * Lab 3: Your code here for _alltraps
