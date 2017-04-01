@@ -66,6 +66,50 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 
+	extern void entry0();
+	extern void entry1();
+	extern void entry2();
+	extern void entry3();
+	extern void entry4();
+	extern void entry5();
+	extern void entry6();
+	extern void entry7();
+	extern void entry8();
+	extern void entry10();
+	extern void entry11();
+	extern void entry12();
+	extern void entry13();
+	extern void entry14();
+	extern void entry16();
+	extern void entry17();
+	extern void entry18();
+	extern void entry19();
+
+	SETGATE(idt[T_DIVIDE], 	0, GD_KT, entry0, 	0);
+	SETGATE(idt[T_DEBUG], 	0, GD_KT, entry1, 	0);
+	SETGATE(idt[T_NMI], 	0, GD_KT, entry2, 	0);
+	SETGATE(idt[T_BRKPT], 	0, GD_KT, entry3, 	3);
+	SETGATE(idt[T_OFLOW], 	0, GD_KT, entry4, 	0);
+	SETGATE(idt[T_BOUND], 	0, GD_KT, entry5, 	0);
+	SETGATE(idt[T_ILLOP], 	0, GD_KT, entry6, 	0);
+	SETGATE(idt[T_DEVICE], 	0, GD_KT, entry7, 	0);
+	SETGATE(idt[T_DBLFLT], 	0, GD_KT, entry8, 	0);
+	SETGATE(idt[T_TSS], 	0, GD_KT, entry10, 	0);
+	SETGATE(idt[T_SEGNP], 	0, GD_KT, entry11, 	0);
+	SETGATE(idt[T_STACK], 	0, GD_KT, entry12, 	0);
+	SETGATE(idt[T_GPFLT], 	0, GD_KT, entry13, 	0);
+	SETGATE(idt[T_PGFLT], 	0, GD_KT, entry14, 	0);
+	SETGATE(idt[T_FPERR], 	0, GD_KT, entry16, 	0);
+	SETGATE(idt[T_ALIGN], 	0, GD_KT, entry17, 	0);
+	SETGATE(idt[T_MCHK], 	0, GD_KT, entry18, 	0);
+	SETGATE(idt[T_SIMDERR],	0, GD_KT, entry19, 	0);
+
+	//
+	extern void sysenter_handler();
+	wrmsr(0x174, GD_KT, 0);//wrmsr(0x174, __KERNEL_CS, 0);		/* SYSENTER_CS_MSR */
+   	wrmsr(0x175, KSTACKTOP, 0);//wrmsr(0x175, page+PAGE_SIZE, 0);	/* SYSENTER_ESP_MSR */
+	wrmsr(0x176, (uint32_t)sysenter_handler, 0);//wrmsr(0x176, page, 0);			/* SYSENTER_EIP_MSR */
+	
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -143,6 +187,15 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+/*
+Handling Page Faults
+
+The page fault exception, interrupt vector 14 (T_PGFLT), is a particularly important one that we will exercise heavily throughout this lab and the next. When the processor takes a page fault, it stores the linear (i.e., virtual) address that caused the fault in a special processor control register, CR2. In trap.c we have provided the beginnings of a special function, page_fault_handler(), to handle page fault exceptions.
+
+Exercise 5. Modify trap_dispatch() to dispatch page fault exceptions to page_fault_handler(). You should now be able to get make grade to succeed on the faultread, faultreadkernel, faultwrite, and faultwritekernel tests. If any of them don't work, figure out why and fix them. Remember that you can boot JOS into a particular user program using make run-x or make run-x-nox.
+
+You will further refine the kernel's page fault handling below, as you implement system calls.
+*/
 	switch(tf->tf_trapno) {
 		case T_DEBUG:
 		case T_BRKPT:
@@ -211,7 +264,9 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
-
+	if (!(tf->tf_cs & 0x3)) {
+		panic("kernel page fault");
+	}
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 

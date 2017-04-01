@@ -12,6 +12,7 @@
 #include <kern/kdebug.h>
 #include <kern/trap.h>
 
+#include <kern/env.h>
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
 
@@ -29,7 +30,10 @@ static struct Command commands[] = {
 	{ "backtrace", "Display stack backtrace", mon_backtrace },
 	//Exercise 15}}}
 	//{{{Exercise 17
-	{ "time", "Test the running time of a command, Usage: time [command]" , mon_time }
+	{ "time", "Test the running time of a command, Usage: time [command]" , mon_time },
+	{ "c", "Continue execution from the current location, Usage: c" , mon_continue },
+	{ "si", "Executing the code instruction by instruction: si" , mon_stepi },
+	{ "x", "Display the memory: x ADDRESS" , mon_display }
 	//Exercise 17}}}
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
@@ -244,3 +248,54 @@ read_eip()
 	__asm __volatile("movl 4(%%ebp), %0" : "=r" (callerpc));
 	return callerpc;
 }
+
+int
+mon_continue(int argc, char **argv, struct Trapframe *tf)
+{
+	uint32_t eflags;
+	if (tf == NULL) {
+		cprintf("No trapped environment\n");
+		return 1;
+	}
+	eflags = tf->tf_eflags;
+	eflags &= ~FL_TF;
+	tf->tf_eflags = eflags;
+	env_run(curenv);
+	return 0;
+}
+
+
+int
+mon_stepi(int argc, char **argv, struct Trapframe *tf)
+{
+	uint32_t eflags;
+	if (tf == NULL) {
+		cprintf("No trapped environment\n");
+		return 1;
+	}
+	eflags = tf->tf_eflags;
+	eflags |= FL_TF;
+	tf->tf_eflags = eflags;
+
+	cprintf("tf_eip=0x%x\n", tf->tf_eip);
+	env_run(curenv);
+	return 0;
+}
+
+
+int
+mon_display(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc != 2) {
+		cprintf("please enter x addr");
+	}
+	uint32_t get_addr;
+	get_addr = strtol(argv[1], NULL, 16);
+	
+	uint32_t get_val;
+	__asm __volatile("movl (%0), %0" : "=r" (get_val) : "r" (get_addr)); 
+	
+	cprintf("%d\n", get_val);
+	return 0;
+}
+
