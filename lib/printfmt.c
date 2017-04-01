@@ -34,10 +34,28 @@ static const char * const error_string[MAXERROR] =
  * Print a number (base <= 16) in reverse order,
  * using specified putch function and associated pointer putdat.
  */
-static void
+	static void
 printnum(void (*putch)(int, void*), void *putdat,
-	 unsigned long long num, unsigned base, int width, int padc)
+		unsigned long long num, unsigned base, int width, int padc)
 {
+	// if cprintf'parameter includes pattern of the form "%-", padding
+	// space on the right side if neccesary.
+	// you can add helper function if needed.
+	// your code here:
+
+	int leftspace=0;
+	int cntw=0;
+	int mn=num;
+	if(padc=='-'){
+		cntw=width;
+		while(mn>=num){
+			cntw--;
+			mn/=num;
+		}
+		if(cntw>0){
+			width-=cntw;
+		}
+	}
 	// first recursively print all preceding (more significant) digits
 	if (num >= base) {
 		printnum(putch, putdat, num / base, base, width - 1, padc);
@@ -49,11 +67,15 @@ printnum(void (*putch)(int, void*), void *putdat,
 
 	// then print this (the least significant) digit
 	putch("0123456789abcdef"[num % base], putdat);
+	
+	while(--cntw>0){
+		putch(' ',putdat);
+	}
 }
 
 // Get an unsigned int of various possible sizes from a varargs list,
 // depending on the lflag parameter.
-static unsigned long long
+	static unsigned long long
 getuint(va_list *ap, int lflag)
 {
 	if (lflag >= 2)
@@ -66,7 +88,7 @@ getuint(va_list *ap, int lflag)
 
 // Same as getuint but signed - can't use getuint
 // because of sign extension
-static long long
+	static long long
 getint(va_list *ap, int lflag)
 {
 	if (lflag >= 2)
@@ -81,7 +103,7 @@ getint(va_list *ap, int lflag)
 // Main function to format and print a string.
 void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 
-void
+	void
 vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 {
 	register const char *p;
@@ -103,149 +125,187 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		precision = -1;
 		lflag = 0;
 		altflag = 0;
-	reswitch:
+reswitch:
 		switch (ch = *(unsigned char *) fmt++) {
 
-		// flag to pad on the right
-		case '-':
-			padc = '-';
-			goto reswitch;
-			
-		// flag to pad with 0's instead of spaces
-		case '0':
-			padc = '0';
-			goto reswitch;
+			// flag to pad on the right
+			case '-':
+				padc = '-';
+				goto reswitch;
 
-		// width field
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			for (precision = 0; ; ++fmt) {
-				precision = precision * 10 + ch - '0';
-				ch = *fmt;
-				if (ch < '0' || ch > '9')
-					break;
-			}
-			goto process_precision;
+			case '+':
+				padc = '+';
+				goto reswitch;
 
-		case '*':
-			precision = va_arg(ap, int);
-			goto process_precision;
+				// flag to pad with 0's instead of spaces
+			case '0':
+				padc = '0';
+				goto reswitch;
 
-		case '.':
-			if (width < 0)
-				width = 0;
-			goto reswitch;
+				// width field
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				for (precision = 0; ; ++fmt) {
+					precision = precision * 10 + ch - '0';
+					ch = *fmt;
+					if (ch < '0' || ch > '9')
+						break;
+				}
+				goto process_precision;
 
-		case '#':
-			altflag = 1;
-			goto reswitch;
+			case '*':
+				precision = va_arg(ap, int);
+				goto process_precision;
 
-		process_precision:
-			if (width < 0)
-				width = precision, precision = -1;
-			goto reswitch;
+			case '.':
+				if (width < 0)
+					width = 0;
+				goto reswitch;
 
-		// long flag (doubled for long long)
-		case 'l':
-			lflag++;
-			goto reswitch;
+			case '#':
+				altflag = 1;
+				goto reswitch;
 
-		// character
-		case 'c':
-			putch(va_arg(ap, int), putdat);
-			break;
+process_precision:
+				if (width < 0)
+					width = precision, precision = -1;
+				goto reswitch;
 
-		// error message
-		case 'e':
-			err = va_arg(ap, int);
-			if (err < 0)
-				err = -err;
-			if (err >= MAXERROR || (p = error_string[err]) == NULL)
-				printfmt(putch, putdat, "error %d", err);
-			else
-				printfmt(putch, putdat, "%s", p);
-			break;
+				// long flag (doubled for long long)
+			case 'l':
+				lflag++;
+				goto reswitch;
 
-		// string
-		case 's':
-			if ((p = va_arg(ap, char *)) == NULL)
-				p = "(null)";
-			if (width > 0 && padc != '-')
-				for (width -= strnlen(p, precision); width > 0; width--)
-					putch(padc, putdat);
-			for (; (ch = *p++) != '\0' && (precision < 0 || --precision >= 0); width--)
-				if (altflag && (ch < ' ' || ch > '~'))
-					putch('?', putdat);
+				// character
+			case 'c':
+				putch(va_arg(ap, int), putdat);
+				break;
+
+				// error message
+			case 'e':
+				err = va_arg(ap, int);
+				if (err < 0)
+					err = -err;
+				if (err >= MAXERROR || (p = error_string[err]) == NULL)
+					printfmt(putch, putdat, "error %d", err);
 				else
-					putch(ch, putdat);
-			for (; width > 0; width--)
-				putch(' ', putdat);
-			break;
+					printfmt(putch, putdat, "%s", p);
+				break;
 
-		// (signed) decimal
-		case 'd':
-			num = getint(&ap, lflag);
-			if ((long long) num < 0) {
-				putch('-', putdat);
-				num = -(long long) num;
-			}
-			base = 10;
-			goto number;
+				// string
+			case 's':
+				if ((p = va_arg(ap, char *)) == NULL)
+					p = "(null)";
+				if (width > 0 && padc != '-')
+					for (width -= strnlen(p, precision); width > 0; width--)
+						putch(padc, putdat);
+				for (; (ch = *p++) != '\0' && (precision < 0 || --precision >= 0); width--)
+					if (altflag && (ch < ' ' || ch > '~'))
+						putch('?', putdat);
+					else
+						putch(ch, putdat);
+				for (; width > 0; width--)
+					putch(' ', putdat);
+				break;
 
-		// unsigned decimal
-		case 'u':
-			num = getuint(&ap, lflag);
-			base = 10;
-			goto number;
+				// (signed) decimal
+			case 'd':
+				num = getint(&ap, lflag);
+				if ((long long) num < 0) {
+					putch('-', putdat);
+					num = -(long long) num;
+				}else if(padc == '+'){
+					putch('+', putdat);
+				}
+				base = 10;
+				goto number;
 
-		// (unsigned) octal
-		case 'o':
-			// Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+				// unsigned decimal
+			case 'u':
+				num = getuint(&ap, lflag);
+				base = 10;
+				goto number;
 
-		// pointer
-		case 'p':
-			putch('0', putdat);
-			putch('x', putdat);
-			num = (unsigned long long)
-				(uintptr_t) va_arg(ap, void *);
-			base = 16;
-			goto number;
+				// (unsigned) octal
+			case 'o':
+				// Replace this with your code.
+				// display a number in octal form and the form should begin with '0'
+				putch('0', putdat);
+				num = getuint(&ap, lflag);
+				base = 8;
+				goto number;
 
-		// (unsigned) hexadecimal
-		case 'x':
-			num = getuint(&ap, lflag);
-			base = 16;
-		number:
-			printnum(putch, putdat, num, base, width, padc);
-			break;
+				// pointer
+			case 'p':
+				putch('0', putdat);
+				putch('x', putdat);
+				num = (unsigned long long)
+					(uintptr_t) va_arg(ap, void *);
+				base = 16;
+				goto number;
 
-		// escaped '%' character
-		case '%':
-			putch(ch, putdat);
-			break;
-			
-		// unrecognized escape sequence - just print it literally
-		default:
-			putch('%', putdat);
-			for (fmt--; fmt[-1] != '%'; fmt--)
-				/* do nothing */;
-			break;
+				// (unsigned) hexadecimal
+			case 'x':
+				num = getuint(&ap, lflag);
+				base = 16;
+number:
+				printnum(putch, putdat, num, base, width, padc);
+				break;
+
+			case 'n': {
+					  // You can consult the %n specifier specification of the C99 printf function
+					  // for your reference by typing "man 3 printf" on the console. 
+
+					  // 
+					  // Requirements:
+					  // Nothing printed. The argument must be a pointer to a signed char, 
+					  // where the number of characters written so far is stored.
+					  //
+
+					  // hint:  use the following strings to display the error messages 
+					  //        when the cprintf function ecounters the specific cases,
+					  //        for example, when the argument pointer is NULL
+					  //        or when the number of characters written so far 
+					  //        is beyond the range of the integers the signed char type 
+					  //        can represent.
+
+					  const char *null_error = "\nerror! writing through NULL pointer! (%n argument)\n";
+					  const char *overflow_error = "\nwarning! The value %n argument pointed to has been overflowed!\n";
+					  char * Exercise_10=va_arg(ap, char *);
+					  if (Exercise_10 == NULL) {
+						  printfmt(putch, putdat, "%s", null_error);
+						  break;
+					  }
+					  *Exercise_10 = *(unsigned char *)putdat;
+					  if ((*(unsigned char *) putdat) > 0x7F)
+						  printfmt(putch, putdat, "%s", overflow_error);
+
+					  break;
+				  }
+
+				  // escaped '%' character
+			case '%':
+				  putch(ch, putdat);
+				  break;
+
+				  // unrecognized escape sequence - just print it literally
+			default:
+				  putch('%', putdat);
+				  for (fmt--; fmt[-1] != '%'; fmt--)
+					  /* do nothing */;
+				  break;
 		}
 	}
 }
 
-void
+	void
 printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...)
 {
 	va_list ap;
@@ -261,7 +321,7 @@ struct sprintbuf {
 	int cnt;
 };
 
-static void
+	static void
 sprintputch(int ch, struct sprintbuf *b)
 {
 	b->cnt++;
@@ -269,7 +329,7 @@ sprintputch(int ch, struct sprintbuf *b)
 		*b->buf++ = ch;
 }
 
-int
+	int
 vsnprintf(char *buf, int n, const char *fmt, va_list ap)
 {
 	struct sprintbuf b = {buf, buf+n-1, 0};
@@ -286,7 +346,7 @@ vsnprintf(char *buf, int n, const char *fmt, va_list ap)
 	return b.cnt;
 }
 
-int
+	int
 snprintf(char *buf, int n, const char *fmt, ...)
 {
 	va_list ap;

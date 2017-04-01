@@ -17,6 +17,11 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 				 
                  //Lab 3: Your code here
 
+                 "movl %%esp,%%ebp\n\t"
+                 "leal 1f, %%esi\n\t"
+                 "sysenter\n\t"
+                 "1:\n\t"
+
                  "popl %%edi\n\t"
                  "popl %%esi\n\t"
                  "popl %%ebp\n\t"
@@ -25,13 +30,22 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
                  "popl %%edx\n\t"
                  "popl %%ecx\n\t"
                  
-                 : "=a" (ret)
-                 : "a" (num),
+                 : "=a" (ret)/*output operands*/
+                 : "a" (num),/*input operands*/
                    "d" (a1),
                    "c" (a2),
                    "b" (a3),
-                   "D" (a4)
-                 : "cc", "memory");
+                   "D" (a4),
+                   "S" (a5)
+
+/*
+	eax                - syscall number
+	edx, ecx, ebx, edi - arg1, arg2, arg3, arg4
+	esi                - return pc
+	ebp                - return esp
+*/
+                 : "cc", "memory");/*list of clobbered registers*/
+
 
 
 	if(check && ret > 0)
