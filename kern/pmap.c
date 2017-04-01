@@ -155,12 +155,12 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.
 	// Your code goes here:
 
+	pages = (struct Page *)boot_alloc(npages * sizeof( struct Page));
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
 
-	pages = (struct Page *)boot_alloc(npages * sizeof( struct Page));
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
